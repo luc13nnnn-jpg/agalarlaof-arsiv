@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anı Defteri</title>
+    <style>
+        /* Genel Stil */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        /* İsim Listesi Stili */
+        .names-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .name-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+        }
+        
+        .name-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Form Stili */
+        .add-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Modal Stili */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 700px;
+            position: relative;
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        /* Responsive Tasarım */
+        @media (max-width: 768px) {
+            .names-container {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Anı Defteri</h1>
+            <p>Sevdiklerinizin anılarını saklayın ve paylaşın</p>
+        </header>
+        
+        <div class="add-form">
+            <h2>Yeni Kişi Ekle</h2>
+            <div class="form-group">
+                <label for="person-name">İsim</label>
+                <input type="text" id="person-name" placeholder="İsim girin">
+            </div>
+            <button id="add-person">Kişiyi Ekle</button>
+        </div>
+        
+        <h2>Kişiler</h2>
+        <div class="names-container" id="names-list">
+            <!-- İsimler buraya dinamik olarak eklenecek -->
+        </div>
+    </div>
+    
+    <!-- Hikaye Yazma Modal -->
+    <div id="story-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Hikaye Yaz</h2>
+            <div class="form-group">
+                <textarea id="story-text" placeholder="Bu kişiyle ilgili anınızı yazın..."></textarea>
+            </div>
+            <button id="save-story">Hikayeyi Kaydet</button>
+        </div>
+    </div>
+
+    <script>
+        // Sayfa yüklendiğinde çalışacak kod
+        document.addEventListener('DOMContentLoaded', function() {
+            // Yerel depolamadan kişileri yükle
+            loadPeople();
+            
+            // Kişi ekleme butonu
+            document.getElementById('add-person').addEventListener('click', addPerson);
+            
+            // Modal kapatma butonu
+            document.querySelector('.close').addEventListener('click', function() {
+                document.getElementById('story-modal').style.display = 'none';
+            });
+            
+            // Hikaye kaydetme butonu
+            document.getElementById('save-story').addEventListener('click', saveStory);
+            
+            // Modal dışına tıklanınca kapat
+            window.addEventListener('click', function(event) {
+                if (event.target == document.getElementById('story-modal')) {
+                    document.getElementById('story-modal').style.display = 'none';
+                }
+            });
+        });
+        
+        // Kişileri yükleme fonksiyonu
+        function loadPeople() {
+            const people = JSON.parse(localStorage.getItem('people')) || [];
+            const namesList = document.getElementById('names-list');
+            namesList.innerHTML = '';
+            
+            people.forEach(person => {
+                const nameCard = document.createElement('div');
+                nameCard.className = 'name-card';
+                nameCard.innerHTML = `<h3>${person.name}</h3>`;
+                if (person.story) {
+                    nameCard.innerHTML += `<p>${person.story.substring(0, 50)}...</p>`;
+                }
+                nameCard.addEventListener('click', function() {
+                    openStoryModal(person.id);
+                });
+                namesList.appendChild(nameCard);
+            });
+        }
+        
+        // Yeni kişi ekleme fonksiyonu
+        function addPerson() {
+            const nameInput = document.getElementById('person-name');
+            const name = nameInput.value.trim();
+            
+            if (name) {
+                const people = JSON.parse(localStorage.getItem('people')) || [];
+                const newPerson = {
+                    id: Date.now(), // Benzersiz ID
+                    name: name,
+                    story: ''
+                };
+                
+                people.push(newPerson);
+                localStorage.setItem('people', JSON.stringify(people));
+                
+                nameInput.value = '';
+                loadPeople();
+            } else {
+                alert('Lütfen bir isim girin!');
+            }
+        }
+        
+        // Hikaye modalını açma fonksiyonu
+        function openStoryModal(personId) {
+            const people = JSON.parse(localStorage.getItem('people')) || [];
+            const person = people.find(p => p.id === personId);
+            
+            if (person) {
+                document.getElementById('modal-title').textContent = `${person.name} - Hikaye Yaz`;
+                document.getElementById('story-text').value = person.story || '';
+                document.getElementById('story-modal').dataset.personId = personId;
+                document.getElementById('story-modal').style.display = 'block';
+            }
+        }
+        
+        // Hikaye kaydetme fonksiyonu
+        function saveStory() {
+            const personId = parseInt(document.getElementById('story-modal').dataset.personId);
+            const storyText = document.getElementById('story-text').value.trim();
+            
+            const people = JSON.parse(localStorage.getItem('people')) || [];
+            const personIndex = people.findIndex(p => p.id === personId);
+            
+            if (personIndex !== -1) {
+                people[personIndex].story = storyText;
+                localStorage.setItem('people', JSON.stringify(people));
+                
+                document.getElementById('story-modal').style.display = 'none';
+                loadPeople();
+            }
+        }
+    </script>
+</body>
+</html>
